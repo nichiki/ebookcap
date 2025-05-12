@@ -1,0 +1,5 @@
+pyautogui
+pywinctl
+pyobjc
+pillow
+tqdm
