@@ -40,7 +40,7 @@ python main.py capture [オプション]
 | `--pages`, `-p`  | 撮影するページ数（例：`--pages 20`）               |
 | `--interval`     | ページ送りの待ち時間（秒）                          |
 | `--key`          | ページ送りに使うキー（例：`right`, `left`, `space`） |
-| `--output`, `-o` | 保存先フォルダ（デフォルト：デスクトップ）                  |
+| `--output`, `-o` | 保存先フォルダ（デフォルト：デスクトップの ebook-capture フォルダ）                  |
 | `--trim`         | トリミング一括指定（例：`--trim 60,40,10,10`）      |
 | `--trim-top` 等   | 上下左右を個別に指定（`--trim` と併用不可）             |
 | `--no-pdf`       | PDF作成を無効化（PNGのみ保存）                     |
@@ -63,7 +63,7 @@ PyAutoGUI がサポートしているすべてのキー一覧が表示されま�
 すでに PNG があるフォルダから、PDFだけ作り直すには：
 
 ```bash
-python main.py pdf-only --input ./電子書籍キャプチャ
+python main.py pdf-only --input ./ebook-capture
 ```
 
 ---

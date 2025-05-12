@@ -118,7 +118,7 @@ def main():
     cap.add_argument("--pages", "-p", type=int, default=1)
     cap.add_argument("--interval", type=float, default=1.2)
     cap.add_argument("--key", type=str, default="right")
-    cap.add_argument("--output", "-o", type=Path, default=Path.home() / "Desktop" / "電子書籍キャプチャ")
+    cap.add_argument("--output", "-o", type=Path, default=Path.home() / "Desktop" / "ebook-capture")
     cap.add_argument("--pdf", dest="pdf", action="store_true")
     cap.add_argument("--no-pdf", dest="pdf", action="store_false")
     cap.set_defaults(pdf=True)
@@ -130,7 +130,7 @@ def main():
     cap.set_defaults(func=capture)
 
     pdfp = subparsers.add_parser("pdf-only", help="既存PNGからPDFのみを生成")
-    pdfp.add_argument("--input", "-i", type=Path, default=Path.home() / "Desktop" / "電子書籍キャプチャ")
+    pdfp.add_argument("--input", "-i", type=Path, default=Path.home() / "Desktop" / "ebook-capture")
     pdfp.set_defaults(func=lambda args: pdf_only(args.input))
 
     args = parser.parse_args()
