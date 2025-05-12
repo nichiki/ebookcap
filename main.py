@@ -82,7 +82,7 @@ def capture(args):
     # auto判定
     is_auto = (args.pages == "auto")
     if is_auto:
-        print("\n📸 自動判定でページ撮影を開始します...\n")
+        print("\n📸 自動判定でページ撮影を開始します...")
         selected.activate()
         time.sleep(1)
         page_num = 1
