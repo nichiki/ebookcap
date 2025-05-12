@@ -11,7 +11,7 @@ macOS 上で動作する、電子書籍ビューアのウィンドウを自動�
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # または .venv\\Scripts\\activate（Windows）
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
