@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import subprocess
 import time
 from pathlib import Path
@@ -78,23 +79,50 @@ def capture(args):
         print("❌ 対応するQuartzウィンドウIDが見つかりませんでした。")
         exit(1)
 
-    print(f"\n📸 {args.pages} ページ撮影を開始します...\n")
-    selected.activate()
-    time.sleep(1)
-
-    for i in tqdm(range(1, args.pages + 1), desc="📸 キャプチャ中", unit="page"):
-        fname = output / f"{i:04}.png"
-        subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
-        crop_image(fname, top, bottom, left, right)
-
-        if i < args.pages:
+    # auto判定
+    is_auto = (args.pages == "auto")
+    if is_auto:
+        print("\n📸 自動判定でページ撮影を開始します...\n")
+        selected.activate()
+        time.sleep(1)
+        page_num = 1
+        prev_hash = None
+        while True:
+            fname = output / f"{page_num:04}.png"
+            subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            crop_image(fname, top, bottom, left, right)
+            # 画像ハッシュ計算
+            with open(fname, "rb") as f:
+                img_hash = hashlib.md5(f.read()).hexdigest()
+            if prev_hash is not None and img_hash == prev_hash:
+                print(f"\n🛑 同じ画像が続いたため自動終了します（{page_num - 1}ページ）")
+                fname.unlink()  # 最後の重複画像は削除
+                break
+            prev_hash = img_hash
+            page_num += 1
             selected.activate()
             time.sleep(0.3)
             pyautogui.press(args.key)
             time.sleep(args.interval)
+        total_pages = page_num - 1
+    else:
+        pages = int(args.pages)
+        print(f"\n📸 {pages} ページ撮影を開始します...\n")
+        selected.activate()
+        time.sleep(1)
+        for i in tqdm(range(1, pages + 1), desc="📸 キャプチャ中", unit="page"):
+            fname = output / f"{i:04}.png"
+            subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            crop_image(fname, top, bottom, left, right)
+            if i < pages:
+                selected.activate()
+                time.sleep(0.3)
+                pyautogui.press(args.key)
+                time.sleep(args.interval)
+        total_pages = pages
 
     if args.pdf:
-        images = [Image.open(output / f"{i:04}.png").convert("RGB") for i in range(1, args.pages + 1)]
+        images = [Image.open(output / f"{i:04}.png").convert("RGB") for i in range(1, total_pages + 1)]
         pdf_path = output / "output.pdf"
         images[0].save(pdf_path, save_all=True, append_images=images[1:])
         print(f"\n✅ PDFを保存しました → {pdf_path}")
@@ -117,7 +145,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
 
     cap = subparsers.add_parser("capture", help="画像キャプチャとPDF作成")
-    cap.add_argument("--pages", "-p", type=int, default=1)
+    cap.add_argument("--pages", "-p", type=str, default="1")
     cap.add_argument("--interval", type=float, default=1.2)
     cap.add_argument("--key", type=str, default="right")
     cap.add_argument("--output", "-o", type=Path, default=Path.home() / "Desktop" / "ebook-capture")
