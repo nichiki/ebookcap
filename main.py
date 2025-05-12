@@ -88,6 +88,8 @@ def capture(args):
         crop_image(fname, top, bottom, left, right)
 
         if i < args.pages:
+            selected.activate()
+            time.sleep(0.3)
             pyautogui.press(args.key)
             time.sleep(args.interval)
 
