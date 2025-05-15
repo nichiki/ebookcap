@@ -1,5 +1,5 @@
 pyautogui
 pywinctl
-pyobjc
+pyobjc; sys_platform == "darwin"
 pillow
 tqdm

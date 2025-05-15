@@ -7,11 +7,27 @@ macOS および Windows 上で動作する、電子書籍ビューアのウィ�
 
 ## 🛠 インストール
 
-このツールは Python 3.9 以上が必要です。仮想環境を作成し、以下のようにセットアップします：
+このツールは Python 3.9 以上が必要です。
 
+### 1. 仮想環境の作成
+
+#### macOS/Linux
 ```bash
 python -m venv .venv
 source .venv/bin/activate
+```
+
+#### Windows
+```bat
+python -m venv .venv
+.venv\Scripts\activate
+```
+
+### 2. 依存関係のインストール
+
+OSに応じて必要なライブラリだけが自動でインストールされます。
+
+```bash
 pip install -r requirements.txt
 ```
 
@@ -19,7 +35,7 @@ pip install -r requirements.txt
 
 * `pyautogui`
 * `pywinctl`
-* `pyobjc`（macOSのみ）
+* `pyobjc`（macOSのみ自動インストール）
 * `pillow`
 * `tqdm`
 
