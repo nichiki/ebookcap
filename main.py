@@ -47,6 +47,63 @@ def crop_image(path: Path, trim_top: int, trim_bottom: int, trim_left: int, trim
         cropped.save(path)
 
 
+def get_window_list():
+    os_type = platform.system()
+    if os_type == "Darwin":
+        # Mac: Windowオブジェクトリスト
+        return [w for w in pywinctl.getAllWindows() if w.title.strip()]
+    elif os_type == "Windows":
+        # Windows: EnumWindows＋独自フィルタ
+        import win32gui
+        windows = []
+        def callback(hwnd, lParam):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                # 追加のフィルタ（例: サイズ、プロセス名など）もここで可能
+                windows.append((hwnd, win32gui.GetWindowText(hwnd)))
+            return True
+        win32gui.EnumWindows(callback, None)
+        return windows
+    else:
+        print(f"❌ 未対応OS: {os_type}")
+        exit(1)
+
+
+def select_window(windows):
+    print("📚 キャプチャ対象のウィンドウを選んでください：\n")
+    for i, w in enumerate(windows):
+        if isinstance(w, tuple):
+            # Windows: (hwnd, title)
+            print(f"[{i}] {w[1]}")
+        else:
+            # Mac: Windowオブジェクト
+            print(f"[{i}] {w.title}")
+    index = int(input("番号を入力: "))
+    return windows[index]
+
+
+def activate_window(window):
+    window.activate()
+    time.sleep(1)
+
+
+def capture_window_image(window, win_id, fname, os_type):
+    if os_type == "Darwin":
+        subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+    elif os_type == "Windows":
+        bbox = (window.left, window.top, window.width, window.height)
+        img = pyautogui.screenshot(region=bbox)
+        img.save(fname)
+    else:
+        print(f"❌ 未対応OS: {os_type}")
+        exit(1)
+
+
+def save_images_to_pdf(image_dir: Path, total_pages: int, pdf_path: Path):
+    images = [Image.open(image_dir / f"{i:04}.png").convert("RGB") for i in range(1, total_pages + 1)]
+    images[0].save(pdf_path, save_all=True, append_images=images[1:])
+    print(f"\n✅ PDFを保存しました → {pdf_path}")
+
+
 def capture(args):
     output = args.output.expanduser()
     output.mkdir(parents=True, exist_ok=True)
@@ -60,21 +117,25 @@ def capture(args):
     else:
         top, bottom, left, right = args.trim_top, args.trim_bottom, args.trim_left, args.trim_right
 
-    py_windows = [w for w in pywinctl.getAllWindows() if w.title.strip()]
-    if not py_windows:
+    os_type = platform.system()
+    windows = get_window_list()
+    if not windows:
         print("❌ ウィンドウが見つかりませんでした。")
         exit(1)
-
-    print("📚 キャプチャ対象のウィンドウを選んでください：\n")
-    for i, win in enumerate(py_windows):
-        print(f"[{i}] {win.title}")
-
-    index = int(input("番号を入力: "))
-    selected = py_windows[index]
-    title = selected.title.strip()
-
+    selected = select_window(windows)
+    # --- Windowオブジェクト化 ---
+    if os_type == "Windows":
+        hwnd = selected[0]
+        title = selected[1].strip()
+        try:
+            selected_window = pywinctl.Window(hwnd)
+        except Exception as e:
+            print(f"❌ Windowオブジェクトの生成に失敗しました: {e}")
+            exit(1)
+    else:
+        selected_window = selected
+        title = selected_window.title.strip()
     print(f"\n🎯 選択されたウィンドウ: {title}")
-    os_type = platform.system()
     if os_type == "Darwin":
         quartz_wins = get_quartz_windows()
         win_id = find_matching_quartz_window_id(title, quartz_wins)
@@ -88,32 +149,22 @@ def capture(args):
     is_auto = (args.pages == "auto")
     if is_auto:
         print("\n📸 自動判定でページ撮影を開始します...")
-        selected.activate()
-        time.sleep(1)
+        activate_window(selected_window)
         page_num = 1
         prev_hash = None
         while True:
             fname = output / f"{page_num:04}.png"
-            if os_type == "Darwin":
-                subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
-            elif os_type == "Windows":
-                bbox = (selected.left, selected.top, selected.width, selected.height)
-                img = pyautogui.screenshot(region=bbox)
-                img.save(fname)
-            else:
-                print(f"❌ 未対応OS: {os_type}")
-                exit(1)
+            capture_window_image(selected_window, win_id, fname, os_type)
             crop_image(fname, top, bottom, left, right)
-            # 画像ハッシュ計算
             with open(fname, "rb") as f:
                 img_hash = hashlib.md5(f.read()).hexdigest()
             if prev_hash is not None and img_hash == prev_hash:
                 print(f"\n🛑 同じ画像が続いたため自動終了します（{page_num - 1}ページ）")
-                fname.unlink()  # 最後の重複画像は削除
+                fname.unlink()
                 break
             prev_hash = img_hash
             page_num += 1
-            selected.activate()
+            activate_window(selected_window)
             time.sleep(0.3)
             pyautogui.press(args.key)
             time.sleep(args.interval)
@@ -121,32 +172,20 @@ def capture(args):
     else:
         pages = int(args.pages)
         print(f"\n📸 {pages} ページ撮影を開始します...\n")
-        selected.activate()
-        time.sleep(1)
+        activate_window(selected_window)
         for i in tqdm(range(1, pages + 1), desc="📸 キャプチャ中", unit="page"):
             fname = output / f"{i:04}.png"
-            if os_type == "Darwin":
-                subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
-            elif os_type == "Windows":
-                bbox = (selected.left, selected.top, selected.width, selected.height)
-                img = pyautogui.screenshot(region=bbox)
-                img.save(fname)
-            else:
-                print(f"❌ 未対応OS: {os_type}")
-                exit(1)
+            capture_window_image(selected_window, win_id, fname, os_type)
             crop_image(fname, top, bottom, left, right)
             if i < pages:
-                selected.activate()
+                activate_window(selected_window)
                 time.sleep(0.3)
                 pyautogui.press(args.key)
                 time.sleep(args.interval)
         total_pages = pages
-
     if args.pdf:
-        images = [Image.open(output / f"{i:04}.png").convert("RGB") for i in range(1, total_pages + 1)]
         pdf_path = output / "output.pdf"
-        images[0].save(pdf_path, save_all=True, append_images=images[1:])
-        print(f"\n✅ PDFを保存しました → {pdf_path}")
+        save_images_to_pdf(output, total_pages, pdf_path)
 
 
 def pdf_only(input_dir: Path):
