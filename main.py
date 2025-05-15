@@ -9,6 +9,7 @@ import pyautogui
 import pywinctl
 from PIL import Image
 from tqdm import tqdm
+import platform
 
 
 def get_quartz_windows():
@@ -72,12 +73,15 @@ def capture(args):
     title = selected.title.strip()
 
     print(f"\n🎯 選択されたウィンドウ: {title}")
-    quartz_wins = get_quartz_windows()
-    win_id = find_matching_quartz_window_id(title, quartz_wins)
-
-    if not win_id:
-        print("❌ 対応するQuartzウィンドウIDが見つかりませんでした。")
-        exit(1)
+    os_type = platform.system()
+    if os_type == "Darwin":
+        quartz_wins = get_quartz_windows()
+        win_id = find_matching_quartz_window_id(title, quartz_wins)
+        if not win_id:
+            print("❌ 対応するQuartzウィンドウIDが見つかりませんでした。")
+            exit(1)
+    else:
+        win_id = None  # Windowsでは不要
 
     # auto判定
     is_auto = (args.pages == "auto")
@@ -89,7 +93,15 @@ def capture(args):
         prev_hash = None
         while True:
             fname = output / f"{page_num:04}.png"
-            subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            if os_type == "Darwin":
+                subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            elif os_type == "Windows":
+                bbox = (selected.left, selected.top, selected.width, selected.height)
+                img = pyautogui.screenshot(region=bbox)
+                img.save(fname)
+            else:
+                print(f"❌ 未対応OS: {os_type}")
+                exit(1)
             crop_image(fname, top, bottom, left, right)
             # 画像ハッシュ計算
             with open(fname, "rb") as f:
@@ -112,7 +124,15 @@ def capture(args):
         time.sleep(1)
         for i in tqdm(range(1, pages + 1), desc="📸 キャプチャ中", unit="page"):
             fname = output / f"{i:04}.png"
-            subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            if os_type == "Darwin":
+                subprocess.run(["screencapture", "-x", "-o", "-l", str(win_id), str(fname)])
+            elif os_type == "Windows":
+                bbox = (selected.left, selected.top, selected.width, selected.height)
+                img = pyautogui.screenshot(region=bbox)
+                img.save(fname)
+            else:
+                print(f"❌ 未対応OS: {os_type}")
+                exit(1)
             crop_image(fname, top, bottom, left, right)
             if i < pages:
                 selected.activate()
