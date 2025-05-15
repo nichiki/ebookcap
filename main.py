@@ -4,12 +4,13 @@ import subprocess
 import time
 from pathlib import Path
 
-import Quartz
+import platform
+if platform.system() == "Darwin":
+    import Quartz
 import pyautogui
 import pywinctl
 from PIL import Image
 from tqdm import tqdm
-import platform
 
 
 def get_quartz_windows():
