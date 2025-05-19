@@ -56,10 +56,11 @@ def get_window_list():
         # Windows: EnumWindows＋独自フィルタ
         import win32gui
         windows = []
+        exclude_titles = ["設定", "Windows 入力エクスペリエンス", "Program Manager"]
         def callback(hwnd, lParam):
-            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
-                # 追加のフィルタ（例: サイズ、プロセス名など）もここで可能
-                windows.append((hwnd, win32gui.GetWindowText(hwnd)))
+            title = win32gui.GetWindowText(hwnd)
+            if win32gui.IsWindowVisible(hwnd) and title and not any(ex in title for ex in exclude_titles):
+                windows.append((hwnd, title))
             return True
         win32gui.EnumWindows(callback, None)
         return windows
